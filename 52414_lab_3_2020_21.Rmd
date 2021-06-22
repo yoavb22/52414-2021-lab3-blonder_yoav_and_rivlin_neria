@@ -1,6 +1,6 @@
 ---
 title: "52414 Lab 3: Text Wrangling, Sampling"
-author: 
+author: Blonder_Yoav_and_Rivlin_Neria
 date: "June 14, 2021"
 output: html_document
 ---

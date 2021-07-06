@@ -48,12 +48,12 @@ If you do so, *please explain what libraries you've added, and what is each new 
 ```{r, echo = FALSE, warning=FALSE, message=FALSE, results = 'hide'}
 library(ggplot2)
 library(tidyverse)
-library(rvest)
+library(tidytext)
 library(stringr)
 options(scipen=999)
-
-
-setwd("C:\\Users\\Or Zuk\\GoogleDriveHuji\\HUJI\\Teaching\\R_52414\\2021\\Exercises\\labs\\lab_3")
+library(wordcloud2)
+library(spgs)
+library(rvest)
 
 ```
 
@@ -68,8 +68,19 @@ notable female scientists from the 20th century.
 [here](https://en.wikipedia.org/wiki/List_of_female_scientists_in_the_20th_century). For ease of exctraction, you can extract only scientists with known birth or death year. 
 You should end up with a `names` vector of at least `488` elements, where each element is a name of a different female scientist. 
 
-[YOUR SOLUTION HERE]
-
+```{r}
+url <- "https://en.wikipedia.org/wiki/List_of_female_scientists_in_the_20th_century"
+html <- read_html(url)
+text.all <- html_text(html)
+vec_strings<-strsplit(text.all,split = '\n')[[1]]
+sic_fem_vec <-vec_strings[47:570]
+name_vec <- c(str_extract(sic_fem_vec,".*[0-9]{4}"))
+name_vec_1 <- sub(pattern = "born", replacement = "", name_vec)
+name_vec_2 <- c(str_extract(name_vec_1,"[^0-9]+"))
+name_vec_3 <- c(name_vec_2[!is.na(name_vec_2)])
+name_vec_4 <- c(str_extract(name_vec_3,"[^()]+"))
+names <- c(str_extract(name_vec_4,"[^,]+"))
+```
 
 2. When you click on each scientist name, you are transferred into a different url containing text about this scientist. 
 For example, clicking on the first name `Katharine Bartlet`, brings you [here](https://en.wikipedia.org/wiki/Katharine_Bartlett).
@@ -77,7 +88,12 @@ Parse the data and create a new vector variable `names_urls` containing the url 
 You may need to modify the names to get the exact urls. 
 You don't have to be perfect here, and it is enough to get the correct urls for at least $400$ out of the $488$ scientists.   
 
-[YOUR SOLUTION HERE]
+```{r}
+new_names <- c(sub(pattern = " ", replacement = "_", names))
+new_names_1 <- c(str_extract(new_names,"[^ ]+"))
+stringurl <- c(rep("https://en.wikipedia.org/wiki/",489))
+names_urls <- str_c(stringurl,new_names_1)
+```
 
 
 3. Next we would like to retrieve the actual texts about each scientist. 
@@ -87,12 +103,21 @@ The text should start at the line below the line `From Wikipedia, the free encyc
 The text should end right before the `References` of the wikipedia page. See for example the highlighted text below. <br>
 Run the function on the first name `Katharine Bartlet` and verify that the biographical text is extracted correctly. <br>
 **Hint:** You can look at occurances of the scientist name
-
-
 <img src="Katharine.png" width="800" height="450" />
 
 
-[YOUR SOLUTION HERE]
+```{r}
+wiki_text_parser <- function(url){
+new_paragraphs <- read_html(url) %>% html_nodes("p") %>% html_text()
+x = length(new_paragraphs)
+new_vec<-c(strsplit(new_paragraphs,split = '\n'))
+(t <- paste(new_vec,collapse=""))
+t <- c(gsub(pattern = "\"", replacement = "" , t))
+return(t)
+}
+url_2 = "https://en.wikipedia.org/wiki/Katharine_Bartlett"
+wiki_text_parser(url_2)
+```
 
 
 4. Retrieve all the parsed scientists biographies into a vector called `bio`. Use your functions from (a.-c.). <br>
@@ -101,19 +126,44 @@ Some errors may occur, but make sure that your pages urls (part b.) match and re
 successfully at least **two thirds** out of the $488$ biographies. <br>
 **Hint:** You can use the `try` command to run another command such that if the command fail the program continues and is not stopped. 
 
-[YOUR SOLUTION HERE]
+```{r}
+results  <- lapply(names_urls, function(x) try(wiki_text_parser(x)))
+is.error <- function(x) inherits(x, "try-error")
+succeeded <- !vapply(results, is.error, logical(1))
+bio_1 <- c(results[succeeded])
+bio_2 <- c(unlist(bio_1))
+bio_3 <- sub(pattern = "c(,)", replacement = "" , bio_2)
+index <- (str_which(bio_3,"may refer to:"))
+bio <- bio_3[-index]
+
+```
 
 
 5. Find the scientist with the **shortest** and with the **longest** biography (in terms of total number of English characters). 
 
 
-[YOUR SOLUTION HERE]
+```{r}
+shortest_bio <-  bio[[which.min(str_length(bio))]]
+longest_bio <-  bio[[which.max(str_length(bio))]]
+
+```
+The scientist with the shortest is Bice Sechi-Zorn
+The scientist with the longest is Margaret Alice Murray
 
 
 
 6. Find the astronomer whose son was a distinguished statistician.  List all the titles of her publications in the jounral `Nature`.
 
-[YOUR SOLUTION HERE]
+
+```{r}
+find_sic <- str_detect(bio, "astronomer") 
+astronomer <- bio[which(str_detect(bio, "astronomer"))]
+astronomer_son_statistician <- astronomer[which(str_detect(astronomer, "distinguished"))]
+astronomer_son_statistician_1 <- astronomer_son_statistician[which(str_detect(astronomer_son_statistician, "probability"))]
+astronomer_son_statistician_1[[2]]
+```
+Ruby Violet Payne-Scott his son is
+Peter Gavin Hall – a mathematician who worked in theoretical statistics and probability theory
 
 
 7. Retrieve all words appearing in any of the biographies and compute their frequencies. (treat all the texts of the biographies of the scientists as one large document and compute the frequecnies in this document). <br>
@@ -121,14 +171,48 @@ Remove all common stop words (use the command `stop_words` from the *tidytext* p
 Display in a `word-cloud` the top-100 (most-common) remaining words using the computed frequencies. 
 
 
-[YOUR SOLUTION HERE]
-
+```{r}
+clear_bio <- gsub("[[:punct:]]", '', bio)
+clear_bio <- gsub("[[:digit:]]", '', clear_bio)
+word_counts <- as.data.frame(table(unlist( strsplit(clear_bio, "\ ") )))
+word_counts <- with(word_counts, word_counts[ Var1 != "", ] )
+stopwords <- stop_words
+names(word_counts)[1] <- 'word'
+word_counts %<>% filter(!grepl("[^A-Za-z]", .data$word) &
+                               !(tolower(.data$word) %in% stopwords$word) & 
+                               !str_starts(.data$word, "#") &
+                               !str_starts(.data$word, '@') &
+                               .data$word != '–') %>% arrange(desc(.data$Freq))
+top_words <- word_counts %>% head(100)
+wordcloud2(data=top_words, size = 0.4, shape = 'pentagon',gridSize=10 )
+```
 
 8. Compute the frequency $n_i$ of each of the $26$ letters in the English alphabet. <br>
 Consider uppercase and lowercase as the same letter. <br> 
 Plot the sorted frequencies after normalization $p_i = n_i / n$ where $n = \sum_{i=1}^{26}$ it the total number of english letters, in a bar-plot. 
 
-[YOUR SOLUTION HERE]
+```{r}
+upper_bio <- toupper(bio)
+letter_counts <- as.data.frame(table(unlist( strsplit(upper_bio, "") )))
+letter_counts <- with(letter_counts, letter_counts[ Var1 != "", ] )
+names(letter_counts)[1] <- 'letter'
+ABC = c("A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q",
+"R","S","T","U","V","W","X","Y","Z")
+vec_name <- names(letter_counts)
+m = matrix(0,1,2)
+new_data8 <- data.frame(m)
+names(new_data8) <- c(vec_name)
+for (i in 1:26){
+  new_data <- filter(letter_counts,letter == ABC[i])
+  new_data8 <- rbind(new_data8,new_data)}
+new_data8 <- new_data8[2:27,]
+new_data8$Freq <- new_data8$Freq/sum(new_data8$Freq)
+new_data8$Freq <- round(new_data8$Freq,4)
+new_data8_s <- new_data8 %>% arrange(desc(Freq))
+            p<-ggplot(new_data8_s, aes(x=letter, y=Freq, fill=Freq)) +
+  geom_bar(stat="identity")
+p
+```
 
 
 9. Compute the frequencies of consecutive **pairs** of letters for all $26^2$ ordered pairs of English letters in the biographies text. <br>
@@ -138,8 +222,20 @@ For example, if the biographies text was: `Angela Merkel` then the count for `el
 and the count for `am` should be 0. <br>
 What is the *most common* pair of letters? what is the *least common* pair?  
 
-[YOUR SOLUTION HERE]
+```{r}
+letter_counts_9 <- ((unlist( strsplit(upper_bio, "") )))
+pair_letter_counts_9 <- pair.counts(letter_counts_9, case=c("upper"), circular=FALSE)
+pair_letter_counts_9d <- data.frame(pair_letter_counts_9)
+pair_letter_counts_9A <- pair_letter_counts_9d[c(ABC)]
+pair_letter_counts_9B <- pair_letter_counts_9A[c(ABC), ]
+most_freq_pair_ind <- which(pair_letter_counts_9B==max(pair_letter_counts_9B), arr.ind=T)
+names(pair_letter_counts_9B)[most_freq_pair_ind[1]]
+names(pair_letter_counts_9B)[most_freq_pair_ind[2]]
+least_freq_pair_ind <- which(pair_letter_counts_9B==min(pair_letter_counts_9B), arr.ind=T)
+```
 
+the most freq pair is HE
+its 72 pairs of letter 0 times.
 
 
 10. Let $p_a$ be the actual frequency of the letter `a` in English text, and assume that the true value is the one calculated in 
@@ -152,8 +248,55 @@ Explain your results. <br>
 **Note**: The actual standard deviation is a complicated function of the text length for English text since letters written in the text are not independent. Nevertheless, the i.i.d. model gives a useful guideline. 
 
 
-[YOUR SOLUTION HERE]
+```{r}
+find_a <- function(bio_2){
+  upper_bio <- toupper(bio_2)
+a_counts <- as.data.frame(table(unlist( strsplit(upper_bio, "") )))
+a_counts <- with(a_counts, a_counts[ Var1 != "", ] )
+names(a_counts)[1] <- 'a'
+ABC = c("A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q",
+"R","S","T","U","V","W","X","Y","Z")
+vec_name <- names(a_counts)
+m = matrix(0,1,2)
+new_data10 <- data.frame(m)
+names(new_data10)[1:2] <- c(vec_name)
+for (i in 1:26){
+  new_data10a <- filter(a_counts,a == ABC[i])
+  new_data10 <- rbind(new_data10,new_data10a)}
+new_data10$leght_bio <- sum(new_data10$Freq)
+new_data10$Freq <- new_data10$Freq/sum(new_data10$Freq)
+new_data10$Freq <- round(new_data10$Freq,4)
+new_data10 <- new_data10[2,]
+return(new_data10)}
+d = matrix(0,1,3)
+p_hat_ta <- data.frame(d)
+names(p_hat_ta) <- c("a","Freq","leght_bio")
+for (p in 1:360){
+p_hat_ta <- rbind (p_hat_ta,find_a(bio[p]))  
+}
+p_hat_ta <- p_hat_ta[2:361,]
+p_10 <- ggplot(data=p_hat_ta, aes(Freq)) + 
+  geom_histogram(breaks=seq(0.05, 0.125, by=0.0015),fill="green")+geom_vline(aes(xintercept = 0.0852), colour="red")+ggtitle("freq of p_hat of A")
+p_10
+p_hat_ta$absolute_error <- abs(0.0852-p_hat_ta$Freq)
+p_10_1 <- ggplot(data = p_hat_ta, aes(x = absolute_error, y = leght_bio))
+p_10_1 + geom_point(data = p_hat_ta, color = "blue") +ggtitle("freq of dif of P and P hat")
+p_hat_ta$piid <- 0
+p_hat_ta$sd <- 0
 
+for (s in 1:360){
+poll = sample(ABC, p_hat_ta$leght_bio[s], prob= new_data8_s$Freq, replace = TRUE)
+p_hat_ta$piid[s] <-  round((length (poll[which(poll=="A")]))/(p_hat_ta$leght_bio[s]),4)
+p_hat_ta$sd[s] <- round((sqrt((p_hat_ta$piid[s])*(1-p_hat_ta$piid[s]))/(sqrt(p_hat_ta$leght_bio[s]))),4)
+}
+p_10_B <- ggplot(data=p_hat_ta, aes(sd)) + 
+  geom_histogram(breaks=seq(0, 0.018, by=0.00036),fill="orange")+ggtitle("p hat iid sd")
+p_10_B
+
+
+```
+its look like a short bio the error biger.
+in the iid sample we can see almost all the sd very small. we can explain the bigger with a short bio. its look like if the length was des normal the sd will be normal to.
 
 11. Simulate $10,000$ words of length $4$ as follows: <br>
 Sample the four characters of the word as i.i.d. random varaiables from the categorical distribution with the values being the $26$ English letters and the probabilities being the $26$ letter frequencies $p_i$ computed in qu. (8). <br>
@@ -161,8 +304,18 @@ Next, read the list of English words in the dictionary from the file [words_alph
 What fraction of the words you have simulated are actual English words according to this dictrionary?
 
 
-[YOUR SOLUTION HERE]
+```{r}
+vec_4_words = rep(0,10000)
+for(k in 1:10000){
+vec_4_words[k] = paste(sample(size = 4, x =ABC,prob= new_data8$Freq,replace = TRUE) , collapse="")}
+English_words_dictionary <- data.frame(read.table(url("https://raw.githubusercontent.com/dwyl/english-words/master/words_alpha.txt")))
+names(English_words_dictionary) <- "word"
+df_word4_l <- data.frame(tolower(vec_4_words))
+names(df_word4_l) <- "word"
+word_in_dict <-  merge(x = df_word4_l, y = English_words_dictionary, by = "word")
+```
 
+we have 680/10000 =6.8% random word in the dict.
 
 12. Repeat the above question, but this time simulate words as follows:  <br>
 Define $p_{ij}$ to be the conditional probability of letter $j$ to appear after letter $i$, calculated as $p_{ij} = n_{ij} / \sum_{k=1}^{26} n_{ik}$, where the $n_{ij}$'s are computed in qu. (9). <br>
@@ -172,26 +325,52 @@ Similarly,  $c_3$ is simulated *conditional* on $c_1$ with probability: $Prob(c_
 and finally  $c_4$ is simulated *conditional* on $c_1$ with probability: $Prob(c_4 = j | c_3 = i) = p_{ij}$. <br>
 What fraction of simulated words match actual English words? Which of the two random models (from this and the previous question) is more similar to true English text? why do you think this is the case? 
 
-[YOUR SOLUTION HERE]
+```{r}
+df12 <- data.frame(matrix(0,1,2))
+names(df12) <- c("letter","Freq")
+for (g in 1:26){
+  for (t in 1:26){
+  new_data12a <- c(
+    tolower(paste0(names(pair_letter_counts_9B)[g],names(pair_letter_counts_9B)[t])),pair_letter_counts_9B[t,g]/sum(pair_letter_counts_9B[,g]))
+  df12 <- rbind(df12,new_data12a)  
+  }}
+df12$Freq <- as.numeric(df12$Freq)
+df12$Freq <- round(df12$Freq,4)
+df_pair <- df12[2:677, ]
+one_letter_p <- select(new_data8,letter,Freq)
+one_letter_p$letter = tolower(one_letter_p$letter)
+all_letter_p <- one_letter_p %>% full_join(df_pair, by=c("letter","Freq"))
+vec_4_words_2 = rep(0,10)
+sort_vec = rep(0,4)
+for(k in 1:10){
+  for (t in 1:4){
+  vec_4_words_2[k] = paste(sample(size = 4, x =all_letter_p$letter,prob= all_letter_p$Freq,replace = TRUE)  
+  }
 
+vec_4_words_2[k] = paste(sample(size = 4, x =all_letter_p$letter,prob= all_letter_p$Freq,replace = TRUE) , collapse="")}
+```
 
 13. Suppose that a Monkey types a sentence with **two** words by typing randomly one of the words from the biographies, and then typing another one independently *with replacement*, and where the probability of each word is proportional to its frequency in the biographies calculated in qu. (7). <br> 
 What is the probability that the same word will be typed twice? Answer using a Monte-carlo simulation with at least $10000$ random word-pairs. Can you calculate the probability exactly?
 
 
-[YOUR SOLUTION HERE]
+```{r}
 
+```
 
 14. Suppose that a Monkey types a sentence with eight words by typing randomly one of the *words*: `Maria`, `Skłodowska`, `Curie`,  `Pierre`,  `Curie`, `Irène`, `Joliot` and `Curie`  *without replacement* (the word `Curie` appears three times). <br>
 What is the probability that the Monkey will type a sentence with the scientists names `Maria Skłodowska Curie`, `Pierre Curie` and `Irène Joliot Curie` appearing in it? (the three scientists names can appear in any order, but the name of each scientist should appear exactly as listed here, i.e. family name appearning last)? <br>
 Perform a Monte-carlo simulation with at least $50000$ random sentences to estimate the probability. Can you calculate the probability exactly? When answering, please ignore spaces between words.
 
 
-[YOUR SOLUTION HERE]
+```{r}
 
+```
 
 15. What is the probability that a Monkey typing randomly one of the $26$ English *letters* (i.e. using a *uniform distribution*) one after the other (with replacement) will type on her first attempt the name `Rosalind Franklin`? can you estimate it by sampling? explain (ignore spaces and upper/lower case here too).  <br>
 What will be the probability if the Monkey types letters with probability proportional to their frequencies as computed from the text in qu. (8)? <br>
 **Hint:** It is easier to work with log-probabilities
 
-[YOUR SOLUTION HERE]
+```{r}
+
+```

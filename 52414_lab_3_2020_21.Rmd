@@ -315,7 +315,7 @@ names(df_word4_l) <- "word"
 word_in_dict <-  merge(x = df_word4_l, y = English_words_dictionary, by = "word")
 ```
 
-we have 680/10000 =6.8% random word in the dict.
+we have 706/10000 =7.6% random word in the dict.
 
 12. Repeat the above question, but this time simulate words as follows:  <br>
 Define $p_{ij}$ to be the conditional probability of letter $j$ to appear after letter $i$, calculated as $p_{ij} = n_{ij} / \sum_{k=1}^{26} n_{ik}$, where the $n_{ij}$'s are computed in qu. (9). <br>
@@ -326,12 +326,12 @@ and finally  $c_4$ is simulated *conditional* on $c_1$ with probability: $Prob(c
 What fraction of simulated words match actual English words? Which of the two random models (from this and the previous question) is more similar to true English text? why do you think this is the case? 
 
 ```{r}
-df12 <- data.frame(matrix(0,1,2))
-names(df12) <- c("letter","Freq")
+df12 <- data.frame(matrix(0,1,3))
+names(df12) <- c("letter1","letter2","Freq")
 for (g in 1:26){
   for (t in 1:26){
   new_data12a <- c(
-    tolower(paste0(names(pair_letter_counts_9B)[g],names(pair_letter_counts_9B)[t])),pair_letter_counts_9B[t,g]/sum(pair_letter_counts_9B[,g]))
+    tolower(names(pair_letter_counts_9B)[g]), tolower(names(pair_letter_counts_9B)[t]), pair_letter_counts_9B[g,t]/sum(pair_letter_counts_9B[g,]))
   df12 <- rbind(df12,new_data12a)  
   }}
 df12$Freq <- as.numeric(df12$Freq)
@@ -339,38 +339,100 @@ df12$Freq <- round(df12$Freq,4)
 df_pair <- df12[2:677, ]
 one_letter_p <- select(new_data8,letter,Freq)
 one_letter_p$letter = tolower(one_letter_p$letter)
-all_letter_p <- one_letter_p %>% full_join(df_pair, by=c("letter","Freq"))
-vec_4_words_2 = rep(0,10)
-sort_vec = rep(0,4)
-for(k in 1:10){
-  for (t in 1:4){
-  vec_4_words_2[k] = paste(sample(size = 4, x =all_letter_p$letter,prob= all_letter_p$Freq,replace = TRUE)  
-  }
+vec_4_words_2 = rep(0,40000)
+for(k in 1:40000){
+    if (k==1%%4){
+  vec_4_words_2[k] = paste(sample(size = 1, x =one_letter_p$letter,prob= one_letter_p$Freq,replace = TRUE)) }
+    else{
+      filterdf12 <- filter(df_pair,letter1 == vec_4_words_2[k-1])
+      vec_4_words_2[k]= paste(sample(size = 1, x =filterdf12$letter2, prob= filterdf12$Freq,replace = TRUE))
+    }}
+word_4_letter_vec <- rep(0,10000)
+for (x in 1:10000){
+  word_4_letter_vec[x] <- paste0(vec_4_words_2[(4*(x-1))+1],vec_4_words_2[(4*(x-1))+2],vec_4_words_2[(4*(x-1))+3],vec_4_words_2[(4*(x-1))+4])}
+df_word4_l_p <- data.frame((word_4_letter_vec))
+names(df_word4_l_p) <- "word"
+word_in_dict_p <-  merge(x = df_word4_l_p, y = English_words_dictionary, by = "word")
 
-vec_4_words_2[k] = paste(sample(size = 4, x =all_letter_p$letter,prob= all_letter_p$Freq,replace = TRUE) , collapse="")}
 ```
+
+we have 2164/10000 =21.64% random word in the dict.
+its almost duble then last Q
 
 13. Suppose that a Monkey types a sentence with **two** words by typing randomly one of the words from the biographies, and then typing another one independently *with replacement*, and where the probability of each word is proportional to its frequency in the biographies calculated in qu. (7). <br> 
 What is the probability that the same word will be typed twice? Answer using a Monte-carlo simulation with at least $10000$ random word-pairs. Can you calculate the probability exactly?
 
 
 ```{r}
+vec_2_words = rep(0,40000)
+for(k in 1:40000){
+  vec_2_words[k] = paste(sample(size = 1, x =word_counts$word,prob= word_counts$Freq,replace = TRUE))}
+vec_2_words_1 = vec_2_words[seq(1,39999 ,by=2)]
+vec_2_words_2 = vec_2_words[seq(2,40000 ,by=2)]
+df_13 <- data.frame(vec_2_words_1,vec_2_words_2)
+names(df_13)= c("word1","word2")
+filter_same_word = filter(df_13,word1==word2)
+
 
 ```
+
+I got 14/20000 this is mean the prob to get same word twice is 0.07%
+its not the exactly prob but the sample is big and is close to the prob.
 
 14. Suppose that a Monkey types a sentence with eight words by typing randomly one of the *words*: `Maria`, `Skłodowska`, `Curie`,  `Pierre`,  `Curie`, `Irène`, `Joliot` and `Curie`  *without replacement* (the word `Curie` appears three times). <br>
 What is the probability that the Monkey will type a sentence with the scientists names `Maria Skłodowska Curie`, `Pierre Curie` and `Irène Joliot Curie` appearing in it? (the three scientists names can appear in any order, but the name of each scientist should appear exactly as listed here, i.e. family name appearning last)? <br>
 Perform a Monte-carlo simulation with at least $50000$ random sentences to estimate the probability. Can you calculate the probability exactly? When answering, please ignore spaces between words.
 
-
+I change the L in Skłodowska to l and the E in Irène to E to do it more clear its not matter for the Q
 ```{r}
+word_sen = c("Maria", "Sklodowska", "Curie",  "Pierre",  "Curie", "Irene", "Joliot", "Curie")
+vec_sen_words = rep(0,400000)
+for(k in 1:50000){
+  vec_sen_words[((8*(k-1))+1):((8*(k-1))+8)] = paste(sample(size = 8, x =word_sen,replace = FALSE))}
 
+word_8_sen_vec <- rep(0,50000)
+for (x in 1:50000){
+  word_8_sen_vec[x] <- paste(vec_sen_words[((8*(x-1))+1)],vec_sen_words[((8*(x-1))+2)],vec_sen_words[((8*(x-1))+3)],vec_sen_words[((8*(x-1))+4)],vec_sen_words[((8*(x-1))+5)],vec_sen_words[((8*(x-1))+6)],vec_sen_words[((8*(x-1))+7)],vec_sen_words[((8*(x-1))+8)])}
+df_14 <- data.frame(word_8_sen_vec)
+names(df_14) <- "sen"
+fiter_df_14 <- filter(df_14, sen=="Maria Sklodowska Curie Pierre Curie Irene Joliot Curie"|sen=="Pierre Curie Maria Sklodowska Curie Irene Joliot Curie"|sen=="Irene Joliot Curie Pierre Curie Maria Sklodowska Curie"|sen=="Maria Sklodowska Curie Irene Joliot Curie Pierre Curie"|sen=="Pierre Curie Irene Joliot Curie Maria Sklodowska Curie"|sen=="Irene Joliot Curie Maria Sklodowska Curie Pierre Curie")
 ```
+
+I got 51 from 50000 the prob is 0.102% to get the 3 names.
+its not exectly the prob but becouse the sample are 50000 its close.
 
 15. What is the probability that a Monkey typing randomly one of the $26$ English *letters* (i.e. using a *uniform distribution*) one after the other (with replacement) will type on her first attempt the name `Rosalind Franklin`? can you estimate it by sampling? explain (ignore spaces and upper/lower case here too).  <br>
 What will be the probability if the Monkey types letters with probability proportional to their frequencies as computed from the text in qu. (8)? <br>
 **Hint:** It is easier to work with log-probabilities
 
 ```{r}
+vec_Rosalind_Franklin = rep(0,800000)
+abc= tolower(ABC)
+for(k in 1:50000){
+  vec_Rosalind_Franklin[((16*(k-1))+1):((16*(k-1))+16)] = paste(sample(size = 16, x =abc,replace = TRUE))}
+
+vec_Rosalind_Franklin_1 <- rep(0,50000)
+for (x in 1:50000){
+  vec_Rosalind_Franklin_1[x] <- paste(paste0(toupper(vec_Rosalind_Franklin[((16*(x-1))+1)]),vec_Rosalind_Franklin[((16*(x-1))+2)],vec_Rosalind_Franklin[((16*(x-1))+3)],vec_Rosalind_Franklin[((16*(x-1))+4)],vec_Rosalind_Franklin[((16*(x-1))+5)],vec_Rosalind_Franklin[((16*(x-1))+6)],vec_Rosalind_Franklin[((16*(x-1))+7)],vec_Rosalind_Franklin[((16*(x-1))+8)]),paste0(toupper(vec_Rosalind_Franklin[((16*(x-1))+9)]),vec_Rosalind_Franklin[((16*(x-1))+10)],vec_Rosalind_Franklin[((16*(x-1))+11)],vec_Rosalind_Franklin[((16*(x-1))+12)],vec_Rosalind_Franklin[((16*(x-1))+13)],vec_Rosalind_Franklin[((16*(x-1))+14)],vec_Rosalind_Franklin[((16*(x-1))+15)],vec_Rosalind_Franklin[((16*(x-1))+16)]))}
+df_15 <- data.frame(vec_Rosalind_Franklin_1)
+names(df_15) <- "words_Rosalind_Franklin"
+filter_Rosalind_Franklin <- filter(df_15,words_Rosalind_Franklin=="Rosalind Franklin")
+
+
+new_data15 <- new_data8
+new_data15$letter <- tolower(new_data15$letter)
+vec_Rosalind_Franklin_p = rep(0,800000)
+for(k in 1:50000){
+  vec_Rosalind_Franklin_p[((16*(k-1))+1):((16*(k-1))+16)] = paste(sample(size = 16, x =new_data15$letter,prob=new_data15$Freq, replace = TRUE))}
+
+vec_Rosalind_Franklin_p_1 <- rep(0,50000)
+for (x in 1:50000){
+  vec_Rosalind_Franklin_p_1[x] <- paste(paste0(toupper(vec_Rosalind_Franklin_p[((16*(x-1))+1)]),vec_Rosalind_Franklin_p[((16*(x-1))+2)],vec_Rosalind_Franklin_p[((16*(x-1))+3)],vec_Rosalind_Franklin_p[((16*(x-1))+4)],vec_Rosalind_Franklin_p[((16*(x-1))+5)],vec_Rosalind_Franklin_p[((16*(x-1))+6)],vec_Rosalind_Franklin_p[((16*(x-1))+7)],vec_Rosalind_Franklin_p[((16*(x-1))+8)]),paste0(toupper(vec_Rosalind_Franklin_p[((16*(x-1))+9)]),vec_Rosalind_Franklin_p[((16*(x-1))+10)],vec_Rosalind_Franklin_p[((16*(x-1))+11)],vec_Rosalind_Franklin_p[((16*(x-1))+12)],vec_Rosalind_Franklin_p[((16*(x-1))+13)],vec_Rosalind_Franklin_p[((16*(x-1))+14)],vec_Rosalind_Franklin_p[((16*(x-1))+15)],vec_Rosalind_Franklin_p[((16*(x-1))+16)]))}
+df_15_p <- data.frame(vec_Rosalind_Franklin_p_1)
+names(df_15_p) <- "words_Rosalind_Franklin"
+filter_Rosalind_Franklin_p <- filter(df_15_p,words_Rosalind_Franklin=="Rosalind Franklin")
+
 
 ```
+in the to way I dont get in 50000 samples any of Rosalind Franklin
+becouse the chance to get this is 1/26^16 and this a very big number.

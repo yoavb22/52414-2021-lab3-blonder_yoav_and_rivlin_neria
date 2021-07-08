@@ -57,6 +57,8 @@ library(rvest)
 
 ```
 
+I add wordcloud2 to do the wordcloud
+tidytext for do alot of thinks in text
 <br>
 
 
@@ -138,6 +140,7 @@ bio <- bio_3[-index]
 
 ```
 
+We get 369/489 bio
 
 5. Find the scientist with the **shortest** and with the **longest** biography (in terms of total number of English characters). 
 
@@ -313,9 +316,10 @@ names(English_words_dictionary) <- "word"
 df_word4_l <- data.frame(tolower(vec_4_words))
 names(df_word4_l) <- "word"
 word_in_dict <-  merge(x = df_word4_l, y = English_words_dictionary, by = "word")
+prob_11 <- length(word_in_dict$word)
 ```
 
-we have 706/10000 =7.6% random word in the dict.
+we have 669/10000 =6.69% random word in the dict.
 
 12. Repeat the above question, but this time simulate words as follows:  <br>
 Define $p_{ij}$ to be the conditional probability of letter $j$ to appear after letter $i$, calculated as $p_{ij} = n_{ij} / \sum_{k=1}^{26} n_{ik}$, where the $n_{ij}$'s are computed in qu. (9). <br>
@@ -353,11 +357,12 @@ for (x in 1:10000){
 df_word4_l_p <- data.frame((word_4_letter_vec))
 names(df_word4_l_p) <- "word"
 word_in_dict_p <-  merge(x = df_word4_l_p, y = English_words_dictionary, by = "word")
+prob_12 <- length(word_in_dict_p$word)
 
 ```
 
-we have 2164/10000 =21.64% random word in the dict.
-its almost duble then last Q
+we have 2178/10000 =21.78% random word in the dict.
+its triple then last Q
 
 13. Suppose that a Monkey types a sentence with **two** words by typing randomly one of the words from the biographies, and then typing another one independently *with replacement*, and where the probability of each word is proportional to its frequency in the biographies calculated in qu. (7). <br> 
 What is the probability that the same word will be typed twice? Answer using a Monte-carlo simulation with at least $10000$ random word-pairs. Can you calculate the probability exactly?
@@ -372,11 +377,11 @@ vec_2_words_2 = vec_2_words[seq(2,40000 ,by=2)]
 df_13 <- data.frame(vec_2_words_1,vec_2_words_2)
 names(df_13)= c("word1","word2")
 filter_same_word = filter(df_13,word1==word2)
-
+prob_13 <- length(filter_same_word$word1)
 
 ```
 
-I got 14/20000 this is mean the prob to get same word twice is 0.07%
+I got 15/20000 this is mean the prob to get same word twice is 0.075%
 its not the exactly prob but the sample is big and is close to the prob.
 
 14. Suppose that a Monkey types a sentence with eight words by typing randomly one of the *words*: `Maria`, `Skłodowska`, `Curie`,  `Pierre`,  `Curie`, `Irène`, `Joliot` and `Curie`  *without replacement* (the word `Curie` appears three times). <br>
@@ -396,10 +401,12 @@ for (x in 1:50000){
 df_14 <- data.frame(word_8_sen_vec)
 names(df_14) <- "sen"
 fiter_df_14 <- filter(df_14, sen=="Maria Sklodowska Curie Pierre Curie Irene Joliot Curie"|sen=="Pierre Curie Maria Sklodowska Curie Irene Joliot Curie"|sen=="Irene Joliot Curie Pierre Curie Maria Sklodowska Curie"|sen=="Maria Sklodowska Curie Irene Joliot Curie Pierre Curie"|sen=="Pierre Curie Irene Joliot Curie Maria Sklodowska Curie"|sen=="Irene Joliot Curie Maria Sklodowska Curie Pierre Curie")
+prob_14 <- length(fiter_df_14$sen)
+
 ```
 
-I got 51 from 50000 the prob is 0.102% to get the 3 names.
-its not exectly the prob but becouse the sample are 50000 its close.
+I got 53 from 50000 the prob is 0.106% to get the 3 names.
+its not exectly the prob but because the sample are 50000 its close.
 
 15. What is the probability that a Monkey typing randomly one of the $26$ English *letters* (i.e. using a *uniform distribution*) one after the other (with replacement) will type on her first attempt the name `Rosalind Franklin`? can you estimate it by sampling? explain (ignore spaces and upper/lower case here too).  <br>
 What will be the probability if the Monkey types letters with probability proportional to their frequencies as computed from the text in qu. (8)? <br>
@@ -417,6 +424,7 @@ for (x in 1:50000){
 df_15 <- data.frame(vec_Rosalind_Franklin_1)
 names(df_15) <- "words_Rosalind_Franklin"
 filter_Rosalind_Franklin <- filter(df_15,words_Rosalind_Franklin=="Rosalind Franklin")
+prob_15a <- length(filter_Rosalind_Franklin$words_Rosalind_Franklin)
 
 
 new_data15 <- new_data8
@@ -431,8 +439,8 @@ for (x in 1:50000){
 df_15_p <- data.frame(vec_Rosalind_Franklin_p_1)
 names(df_15_p) <- "words_Rosalind_Franklin"
 filter_Rosalind_Franklin_p <- filter(df_15_p,words_Rosalind_Franklin=="Rosalind Franklin")
-
+prob_15b <- length(filter_Rosalind_Franklin_p$words_Rosalind_Franklin)
 
 ```
 in the to way I dont get in 50000 samples any of Rosalind Franklin
-becouse the chance to get this is 1/26^16 and this a very big number.
+because the chance to get this is 1/26^16 and this a very big number.
